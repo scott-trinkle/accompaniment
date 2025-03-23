@@ -22,7 +22,8 @@ def download_best_audio(url, output_dir="."):
             'preferredquality': '192',
         }],
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
-        'ffmpeg_location' : FFMPEG_PATH
+        'ffmpeg_location' : FFMPEG_PATH,
+        'ffprobe_location': FFMPEG_PATH
     }
     
     with yt_dlp.YoutubeDL(options) as ydl:
@@ -68,12 +69,6 @@ def slow_down_audio(y, speed):
 
 st.title('Download accompaniment tracks')
 
-st.write(FFMPEG_PATH)
-st.write(os.environ["FFMPEG_BINARY"])
-
-from glob import glob
-fns = glob('ffmpeg/*')
-st.write(fns)
 
 with st.form('input form'):
     url = st.text_input('URL', value='')
