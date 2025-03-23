@@ -71,6 +71,10 @@ st.title('Download accompaniment tracks')
 st.write(FFMPEG_PATH)
 st.write(os.environ["FFMPEG_BINARY"])
 
+from glob import glob
+fns = glob('ffmpeg/*')
+st.write(fns)
+
 with st.form('input form'):
     url = st.text_input('URL', value='')
     speed = st.number_input('% Speed', min_value=1, max_value=500, value=100)
