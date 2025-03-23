@@ -7,10 +7,10 @@ import librosa
 from pydub import AudioSegment
 
 
-FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg", "ffmpeg")
+# FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg", "ffmpeg")
 
-# Set the path to ffmpeg (if it's not in your PATH)
-os.environ["FFMPEG_BINARY"] = FFMPEG_PATH
+# # Set the path to ffmpeg (if it's not in your PATH)
+# os.environ["FFMPEG_BINARY"] = FFMPEG_PATH
 
 
 def download_best_audio(url, output_dir="."): 
@@ -22,8 +22,8 @@ def download_best_audio(url, output_dir="."):
             'preferredquality': '192',
         }],
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
-        'ffmpeg_location' : FFMPEG_PATH,
-        'ffprobe_location': FFMPEG_PATH
+        # 'ffmpeg_location' : FFMPEG_PATH,
+        # 'ffprobe_location': FFMPEG_PATH
     }
     
     with yt_dlp.YoutubeDL(options) as ydl:
