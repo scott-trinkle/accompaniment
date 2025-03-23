@@ -1,52 +1,19 @@
+import io
 import os
-import sys
-from pathlib import Path
-
-# Get the home directory
-DOWNLOADS_DIR = str(Path.home() / "Downloads")
-
-# Create a log file with timestamp
-import datetime
-log_file = os.path.join(DOWNLOADS_DIR, f"app_log_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}.txt")
-
-# Open the log file and redirect stdout and stderr
-sys.stdout = open(log_file, "w", buffering=1)  # Line buffering
-sys.stderr = sys.stdout
-
-print('Setting up log')
-
-import librosa
-import tkinter as tk
 import yt_dlp
-
-import soundfile as sf
-from tkinter import messagebox
-
-# Get the path to FFmpeg inside the PyInstaller bundle
-if getattr(sys, 'frozen', False):  # If running as a PyInstaller executable
-    FFMPEG_PATH = os.path.join(sys._MEIPASS, "ffmpeg", "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
-else:  # Running as a normal script
-    FFMPEG_PATH = os.path.join(os.path.dirname(__file__), "ffmpeg", "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+import numpy as np
+import streamlit as st
+import librosa
+from pydub import AudioSegment
 
 
-def update_log(message):
-    print(message)
-    messagebox.showinfo('Status', message)
+FFMPEG_PATH = os.path.join(os.path.dirname(__file__), "ffmpeg", "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+
+# Set the path to ffmpeg (if it's not in your PATH)
+os.environ["FFMPEG_BINARY"] = FFMPEG_PATH
 
 
-def process_audio(input_file, speed):
-    y, sr = librosa.load(input_file)        
-
-    # Slow down the audio (e.g., factor of 0.5 means slowing down by 50%)
-    y_slow = librosa.effects.time_stretch(y, rate=speed)    
-
-    return y_slow, sr
-
-
-def download_best_audio(url):
-
-    update_log('Downloading file...')
-
+def download_best_audio(url, output_dir="."): 
     options = {
         'format': 'bestaudio/best',
         'postprocessors': [{
@@ -54,79 +21,76 @@ def download_best_audio(url):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'outtmpl': f'{DOWNLOADS_DIR}/%(title)s.%(ext)s',
+        'outtmpl': f'{output_dir}/%(title)s.%(ext)s',
         'ffmpeg_location' : FFMPEG_PATH
     }
     
     with yt_dlp.YoutubeDL(options) as ydl:
         info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info).rsplit(".", 1)[0] + ".mp3"        
+        filename = ydl.prepare_filename(info).rsplit(".", 1)[0] + ".mp3"
+
+    thumbnail_url = info.get("thumbnail", "")
+
+    y, sr = librosa.load(filename)
+    output_file = filename.split('.mp3')[0] + f'_{speed}' + '.mp3'
+
+    os.remove(filename)
     
-    return filename
+    return y, sr, output_file
 
 
-def slow_down_audio(input_file, speed):
-    update_log('Loading file...')
-    speed = speed / 100
-    output_file = input_file.split('.mp3')[0] + f'_{speed:.2f}x' + '.mp3'
+def audio_arr_to_bin(arr, sr):
+    arr = np.int16(arr / np.max(np.abs(arr)) * 32767)
+
+    # Convert processed audio (NumPy array) to WAV using pydub
+    audio_segment = AudioSegment(
+        arr.tobytes(),
+        frame_rate=sr,
+        sample_width=2,  # 16-bit audio
+        channels=1       # Mono audio
+    )
+
+    # Save the processed audio to a BytesIO buffer as MP3
+    mp3_buffer = io.BytesIO()
+    audio_segment.export(mp3_buffer, format="mp3")
+    mp3_buffer.seek(0)  # Reset the buffer position to the beginning
+    return mp3_buffer
+
+
+def slow_down_audio(y, speed):
+    speed = speed / 100        
+
+    # Slow down the audio (e.g., factor of 0.5 means slowing down by 50%)
+    y_slow = librosa.effects.time_stretch(y, rate=speed)
+
+    return y_slow
+
+
+st.title('Download accompaniment tracks')
+
+with st.form('input form'):
+    url = st.text_input('URL', value='')
+    speed = st.number_input('% Speed', min_value=1, max_value=500, value=100)
+    st.form_submit_button('Update')
+
+if url != '':
+    run_yt = st.button(f'Click to load file and change to {speed/100:.2f}x speed')
+    status = st.empty()
+    if run_yt:
+        status.warning('Loading audio...')    
+        y, sr, out_fn = download_best_audio(url)
     
-    y_slow, sr = process_audio(input_file, speed)
+        if speed != 100:
+            status.warning('Adjusting speed...')
+            y = slow_down_audio(y, speed=speed)
 
-    update_log('Saving...')
-    sf.write(output_file, y_slow, sr)
+        status.success('Your file is ready to download')
 
-    update_log('Removing...')
-    os.remove(input_file)    
-
-    return output_file
-
-
-def main():
-    url = url_entry.get()
-    speed = float(speed_entry.get())    
-
-    filename = download_best_audio(url)
-    if speed != 100.0:        
-        slow_down_audio(filename, speed)
-
-    update_log('Complete!')
-
-
-# Create the main window
-root = tk.Tk()
-root.title("Youtube downloader")
-
-window_width = 600
-window_height = 600
-
-# Get screen width and height
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-# Calculate position
-x_position = (screen_width - window_width) // 2
-y_position = (screen_height - window_height) // 2
-
-# Set the window size and position
-root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
-
-# Default values
-default_speed = 100.0
-default_url = "https://youtu.be/fW86lcZJoUs?si=xp1MoI_A6IJdu6sM"
-
-tk.Label(root, text="URL:").pack(padx=10, pady=5, anchor='w')
-url_entry = tk.Entry(root, width=50)
-url_entry.insert(0, default_url)  # Set default value
-url_entry.pack(padx=10, pady=5, anchor='w')
-
-tk.Label(root, text="Speed (%):").pack(padx=10, pady=5, anchor='w')
-speed_entry = tk.Entry(root)
-speed_entry.insert(0, str(default_speed))  # Set default value
-speed_entry.pack(padx=10, pady=5, anchor='w')
-
-# Create the save button
-save_button = tk.Button(root, text="Save Data", command=main)
-save_button.pack(pady=10)
-
-# Start the main loop
-root.mainloop()
+        mp3_buffer = audio_arr_to_bin(y, sr)
+        
+        st.download_button(
+            label="Download file",
+            data=mp3_buffer,
+            file_name=out_fn,
+            mime="audio/mp3"
+        )

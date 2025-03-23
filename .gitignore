@@ -2,5 +2,4 @@ venv*
 .DS_Store
 dist
 build/*
-ffmpeg
 scratch
