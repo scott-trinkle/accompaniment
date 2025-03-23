@@ -7,7 +7,7 @@ import librosa
 from pydub import AudioSegment
 
 
-FFMPEG_PATH = os.path.join(os.path.dirname(__file__), "ffmpeg", "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg", "ffmpeg")
 
 # Set the path to ffmpeg (if it's not in your PATH)
 os.environ["FFMPEG_BINARY"] = FFMPEG_PATH
