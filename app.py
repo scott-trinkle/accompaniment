@@ -1,16 +1,26 @@
-import librosa
 import os
 import sys
-import tkinter as tk
-import yt_dlp
-
-import soundfile as sf
-
-from tkinter import messagebox
 from pathlib import Path
 
 # Get the home directory
 DOWNLOADS_DIR = str(Path.home() / "Downloads")
+
+# Create a log file with timestamp
+import datetime
+log_file = os.path.join(DOWNLOADS_DIR, f"app_log_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}.txt")
+
+# Open the log file and redirect stdout and stderr
+sys.stdout = open(log_file, "w", buffering=1)  # Line buffering
+sys.stderr = sys.stdout
+
+print('Setting up log')
+
+import librosa
+import tkinter as tk
+import yt_dlp
+
+import soundfile as sf
+from tkinter import messagebox
 
 # Get the path to FFmpeg inside the PyInstaller bundle
 if getattr(sys, 'frozen', False):  # If running as a PyInstaller executable
@@ -19,23 +29,19 @@ else:  # Running as a normal script
     FFMPEG_PATH = os.path.join(os.path.dirname(__file__), "ffmpeg", "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
 
 
-class RedirectText:
-    """Redirects stdout (print statements) to a Tkinter Text widget."""
-    def __init__(self, text_widget):
-        self.text_widget = text_widget
-
-    def write(self, string):
-        self.text_widget.insert(tk.END, string)  # Append text to the end
-        self.text_widget.see(tk.END)  # Auto-scroll to the bottom
-
-    def flush(self):  
-        pass  # Needed for compatibility with sys.stdout
-
-
 def update_log(message):
     print(message)
-    log_label.config(text=message)  # Update label text
-    
+    messagebox.showinfo('Status', message)
+
+
+def process_audio(input_file, speed):
+    y, sr = librosa.load(input_file)        
+
+    # Slow down the audio (e.g., factor of 0.5 means slowing down by 50%)
+    y_slow = librosa.effects.time_stretch(y, rate=speed)    
+
+    return y_slow, sr
+
 
 def download_best_audio(url):
 
@@ -60,16 +66,16 @@ def download_best_audio(url):
 
 
 def slow_down_audio(input_file, speed):
-    update_log('Adjusting speed...')
+    update_log('Loading file...')
     speed = speed / 100
     output_file = input_file.split('.mp3')[0] + f'_{speed:.2f}x' + '.mp3'
     
-    y, sr = librosa.load(input_file)    
+    y_slow, sr = process_audio(input_file, speed)
 
-    # Slow down the audio (e.g., factor of 0.5 means slowing down by 50%)
-    y_slow = librosa.effects.time_stretch(y, rate=speed)    
-
+    update_log('Saving...')
     sf.write(output_file, y_slow, sr)
+
+    update_log('Removing...')
     os.remove(input_file)    
 
     return output_file
@@ -80,8 +86,7 @@ def main():
     speed = float(speed_entry.get())    
 
     filename = download_best_audio(url)
-    if speed != 100.0:
-        update_log('passed if statement')
+    if speed != 100.0:        
         slow_down_audio(filename, speed)
 
     update_log('Complete!')
@@ -122,19 +127,6 @@ speed_entry.pack(padx=10, pady=5, anchor='w')
 # Create the save button
 save_button = tk.Button(root, text="Save Data", command=main)
 save_button.pack(pady=10)
-
-# Label for logs
-tk.Label(root, text="Status:").pack(pady=5)
-log_label = tk.Label(root, text="Waiting for action...", font=("Arial", 12))
-log_label.pack()
-
-# Text Widget for Logs
-log_text = tk.Text(root, height=10, width=50, state=tk.NORMAL)
-log_text.pack()
-
-# Redirect stdout to log_text widget
-sys.stdout = RedirectText(log_text)
-
 
 # Start the main loop
 root.mainloop()
