@@ -7,12 +7,6 @@ import librosa
 from pydub import AudioSegment
 
 
-# FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg", "ffmpeg")
-
-# # Set the path to ffmpeg (if it's not in your PATH)
-# os.environ["FFMPEG_BINARY"] = FFMPEG_PATH
-
-
 def download_best_audio(url, output_dir="."): 
     options = {
         'format': 'bestaudio/best',
@@ -66,6 +60,11 @@ def slow_down_audio(y, speed):
 
     return y_slow
 
+st.set_page_config(
+    page_title="Accompaniment!",  # Set the title of the browser tab
+    page_icon="🎵",                 # Optional: Set a page icon (emoji or image)
+    layout="centered",              # Optional: Set layout style ('centered' or 'wide')    
+)
 
 st.title('Download accompaniment tracks')
 
