@@ -1,5 +1,3 @@
-# YouTube Downloader
-
 - `pip install --upgrade pip` 
 - Downloaded ffmpeg [here](https://evermeet.cx/ffmpeg/)
 - Removed quarantine: `xattr -d com.apple.quarantine /path/to/ffmpeg`
