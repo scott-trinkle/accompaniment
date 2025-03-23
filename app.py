@@ -68,6 +68,9 @@ def slow_down_audio(y, speed):
 
 st.title('Download accompaniment tracks')
 
+st.write(FFMPEG_PATH)
+st.write(os.environ["FFMPEG_BINARY"])
+
 with st.form('input form'):
     url = st.text_input('URL', value='')
     speed = st.number_input('% Speed', min_value=1, max_value=500, value=100)
